@@ -7,7 +7,20 @@ let cardsCache = null;
 let wishlistConn = null;
 let Wishlist = null;
 const wishlistCache = new Map();
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_TTL = 5 * 60 * 1000;
+
+const ELEMENT_EMOJIS = {
+  normal: '<:LU_NeutralElement:1478643394585821217>',
+  water: '<:LU_WaterElement:1478643391901470863>',
+  ice: '<:LU_IceElement:1478643390211035237>',
+  ground: '<:LU_GroundElement:1478643388155826299>',
+  grass: '<:LU_GrassElement:1478643385681055805>',
+  fire: '<:LU_FireElement:1478643383605006376>',
+  electric: '<:LU_ElectricElement:1478643380689829929>',
+  air: '<:LU_AirElement:1478643377523130420>',
+  light: '<:LU_LightElement:1478643374805352449>',
+  dark: '<:LU_DarkElement:1478643372485902426>'
+};
 
 function getCards() {
   if (!cardsCache) {
@@ -31,22 +44,49 @@ function levenshteinDistance(a, b) {
   return matrix[b.length][a.length];
 }
 
+const pendingConfirmations = new Map();
+
 function findSimilarCards(name, allCards) {
-  const nameLower = name.toLowerCase();
-  const matches = allCards
+  const nameLower = name.toLowerCase().trim();
+  if (!nameLower) return [];
+  
+  const containsMatches = allCards.filter(c => c.name.toLowerCase().includes(nameLower));
+  if (containsMatches.length > 0) return containsMatches;
+  
+  const searchWords = nameLower.split(/\s+/).filter(w => w.length > 0);
+  const allWordsMatches = allCards.filter(c => {
+    const cardNameLower = c.name.toLowerCase();
+    return searchWords.every(word => cardNameLower.includes(word));
+  });
+  if (allWordsMatches.length > 0) return allWordsMatches;
+  
+  const anyWordExactMatches = allCards.filter(c => {
+    const cardWords = c.name.toLowerCase().split(/\s+/);
+    return searchWords.some(sw => cardWords.includes(sw));
+  });
+  if (anyWordExactMatches.length > 0) return anyWordExactMatches;
+  
+  const anyWordPartialMatches = allCards.filter(c => {
+    const cardWords = c.name.toLowerCase().split(/\s+/);
+    return searchWords.some(sw => cardWords.some(cw => cw.includes(sw) || sw.includes(cw)));
+  });
+  if (anyWordPartialMatches.length > 0) return anyWordPartialMatches;
+  
+  const threshold = nameLower.length <= 3 ? 1 : nameLower.length <= 6 ? 2 : 3;
+  const fuzzyMatches = allCards
     .map(card => ({
       card,
       distance: levenshteinDistance(nameLower, card.name.toLowerCase())
     }))
-    .filter(m => m.distance <= 3)
+    .filter(m => m.distance <= threshold)
     .sort((a, b) => a.distance - b.distance);
   
-  if (matches.length === 0) return [];
+  if (fuzzyMatches.length > 0) {
+    const minDistance = fuzzyMatches[0].distance;
+    return fuzzyMatches.filter(m => m.distance === minDistance).map(m => m.card);
+  }
   
-  const minDistance = matches[0].distance;
-  const closestMatches = matches.filter(m => m.distance === minDistance).map(m => m.card.name);
-  
-  return closestMatches;
+  return [];
 }
 
 async function initWishlistConnection() {
@@ -84,55 +124,72 @@ async function handleWishlistAdd(message, cardNames) {
     const { Wishlist: WishlistModel } = await initWishlistConnection();
     
     const namesToAdd = cardNames.split(',').map(n => n.trim()).filter(n => n);
-    const added = [];
-    const notFound = [];
     
+    if (namesToAdd.length !== 1) {
+      await message.reply('❌ Please add one card at a time for better accuracy.');
+      return;
+    }
+    
+    const name = namesToAdd[0];
     let userWishlist = await WishlistModel.findById(message.author.id);
     if (!userWishlist) {
       userWishlist = new WishlistModel({ _id: message.author.id, wl: [], cardCount: 0 });
     }
     
-    for (const name of namesToAdd) {
-      if (userWishlist.wl.length >= 10) {
-        notFound.push(`${name} (Wishlist full - max 10 cards)`);
-        continue;
-      }
-      const card = allCards.find(c => c.name.toLowerCase() === name.toLowerCase());
-      if (card) {
-        const exists = userWishlist.wl.some(c => c.n.toLowerCase() === card.name.toLowerCase());
-        if (!exists) {
-          userWishlist.wl.push({ n: card.name, e: card.element.toLowerCase() });
-          added.push(`${card.name} [${card.element}]`);
-        }
-      } else {
-        const suggestions = findSimilarCards(name, allCards);
-        if (suggestions.length > 0) {
-          notFound.push(`${name} (Did you mean: ${suggestions.join(', ')}?)`);
-        } else {
-          notFound.push(name);
-        }
-      }
+    if (userWishlist.wl.length >= 10) {
+      await message.reply('❌ Wishlist full - max 10 cards allowed.');
+      return;
     }
     
-    if (added.length > 0) {
+    const matches = findSimilarCards(name, allCards);
+    
+    if (matches.length === 0) {
+      await message.reply(`❌ No cards found matching "${name}".`);
+      return;
+    }
+    
+    if (matches.length === 1) {
+      const card = matches[0];
+      const exists = userWishlist.wl.some(c => c.n === card.name && c.e === card.element.toLowerCase());
+      if (exists) {
+        await message.reply(`❌ **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} is already in your wishlist.`);
+        return;
+      }
+      
+      userWishlist.wl.push({ n: card.name, e: card.element.toLowerCase() });
       userWishlist.cardCount = userWishlist.wl.length;
       userWishlist.updatedAt = new Date();
       await userWishlist.save();
       invalidateCache(message.author.id);
+      
+      await message.reply(`✅ Added **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} [${card.series}] to your wishlist!`);
+      return;
     }
+    
+    const displayLimit = 25;
+    const displayMatches = matches.slice(0, displayLimit);
+    const hasMore = matches.length > displayLimit;
     
     const embed = new EmbedBuilder()
-      .setColor(added.length > 0 ? 0x00ff00 : 0xff0000)
-      .setTitle('Wishlist Update');
-    
-    if (added.length > 0) {
-      embed.addFields({ name: '✅ Added', value: added.join('\n'), inline: false });
-    }
-    if (notFound.length > 0) {
-      embed.addFields({ name: '❌ Not Found', value: notFound.join('\n'), inline: false });
-    }
+      .setColor(0xffaa00)
+      .setTitle('Multiple cards found')
+      .setDescription(`Found ${matches.length} card${matches.length > 1 ? 's' : ''}${hasMore ? ` (showing first ${displayLimit})` : ''}. Reply with the number to select:\n\n` +
+        displayMatches.map((c, i) => {
+          const emoji = ELEMENT_EMOJIS[c.element.toLowerCase()] || c.element;
+          return `**${i + 1}.** ${c.name} ${emoji} - ${c.series} (${c.role})`;
+        }).join('\n'))
+      .setFooter({ text: 'Reply with 1, 2, 3... or "cancel"' });
     
     await message.reply({ embeds: [embed] });
+    
+    pendingConfirmations.set(message.author.id, {
+      matches: displayMatches,
+      wishlist: userWishlist,
+      timestamp: Date.now()
+    });
+    
+    setTimeout(() => pendingConfirmations.delete(message.author.id), 60000);
+    
   } catch (error) {
     console.error('Wishlist add error:', error);
     await message.reply('❌ Error adding to wishlist.');
@@ -140,6 +197,7 @@ async function handleWishlistAdd(message, cardNames) {
 }
 
 async function handleWishlistView(message, targetUser = null) {
+  let loadingMsg = null;
   try {
     const userId = targetUser?.id || message.author.id;
     const isOwner = message.author.id === process.env.BOT_OWNER_ID;
@@ -152,127 +210,119 @@ async function handleWishlistView(message, targetUser = null) {
     let wishlist = getCachedWishlist(userId);
     
     if (!wishlist) {
+      loadingMsg = await message.reply('<a:loading:1471139633894133812>');
+    }
+    
+    if (!wishlist) {
       const { Wishlist: WishlistModel } = await initWishlistConnection();
       wishlist = await WishlistModel.findById(userId).lean();
       if (wishlist) setCachedWishlist(userId, wishlist);
     }
     
     if (!wishlist || !wishlist.wl || wishlist.wl.length === 0) {
-      await message.reply(`${targetUser ? `<@${userId}>` : 'You'} have no cards in wishlist.`);
+      const emptyMsg = `${targetUser ? `<@${userId}>` : 'You'} have no cards in wishlist.`;
+      if (loadingMsg) {
+        await loadingMsg.edit(emptyMsg);
+      } else {
+        await message.reply(emptyMsg);
+      }
       return;
     }
     
-    const grouped = {};
-    wishlist.wl.forEach(card => {
-      if (!grouped[card.e]) grouped[card.e] = [];
-      grouped[card.e].push(card.n);
+    const totalCards = wishlist.cardCount || wishlist.wl.length;
+    const maxLength = Math.max(...wishlist.wl.map(c => c.n.length));
+    
+    const cardLines = wishlist.wl.map(card => {
+      const emoji = ELEMENT_EMOJIS[card.e] || card.e;
+      const paddedName = card.n.padEnd(maxLength, ' ');
+      return `${emoji} \`${paddedName}\``;
     });
     
-    const elements = Object.keys(grouped);
-    const itemsPerPage = 5;
-    let currentPage = 0;
-    const totalPages = Math.ceil(elements.length / itemsPerPage);
-    const totalCards = wishlist.cardCount || wishlist.wl.length;
+    const embed = new EmbedBuilder()
+      .setColor(0x0099ff)
+      .setTitle(`${targetUser ? `${targetUser.username}'s` : 'Your'} Wishlist`)
+      .setDescription(cardLines.join('\n'))
+      .setFooter({ text: `${totalCards}/10 cards` });
     
-    const generateEmbed = (page) => {
-      const embed = new EmbedBuilder()
-        .setColor(0x0099ff)
-        .setTitle(`${targetUser ? `${targetUser.username}'s` : 'Your'} Wishlist`)
-        .setDescription(`Total: ${totalCards}/10 cards`);
-      
-      const start = page * itemsPerPage;
-      const end = Math.min(start + itemsPerPage, elements.length);
-      
-      for (let i = start; i < end; i++) {
-        const element = elements[i];
-        const cards = grouped[element];
-        const cardList = cards.slice(0, 20).join(', ');
-        const more = cards.length > 20 ? ` (+${cards.length - 20} more)` : '';
-        embed.addFields({ 
-          name: `${element.charAt(0).toUpperCase() + element.slice(1)} (${cards.length})`, 
-          value: cardList + more, 
-          inline: false 
-        });
-      }
-      
-      embed.setFooter({ text: `Page ${page + 1}/${totalPages}` });
-      return embed;
-    };
-    
-    const reply = await message.reply({ embeds: [generateEmbed(currentPage)] });
-    
-    if (totalPages > 1) {
-      await reply.react('⬅️');
-      await reply.react('➡️');
-      
-      const filter = (reaction, user) => {
-        return ['⬅️', '➡️'].includes(reaction.emoji.name) && !user.bot;
-      };
-      
-      const collector = reply.createReactionCollector({ filter, time: 60000 });
-      
-      collector.on('collect', async (reaction, user) => {
-        if (user.id !== message.author.id) {
-          await message.channel.send(`<@${user.id}> sharam h kya bro`);
-          await reaction.users.remove(user.id);
-          return;
-        }
-        
-        if (reaction.emoji.name === '➡️' && currentPage < totalPages - 1) {
-          currentPage++;
-          await reply.edit({ embeds: [generateEmbed(currentPage)] });
-        } else if (reaction.emoji.name === '⬅️' && currentPage > 0) {
-          currentPage--;
-          await reply.edit({ embeds: [generateEmbed(currentPage)] });
-        }
-        await reaction.users.remove(user.id);
-      });
-      
-      collector.on('end', () => {
-        reply.reactions.removeAll().catch(() => {});
-      });
+    if (loadingMsg) {
+      await loadingMsg.edit({ content: '', embeds: [embed] });
+    } else {
+      await message.reply({ embeds: [embed] });
     }
+    
   } catch (error) {
     console.error('Wishlist view error:', error);
-    console.error('Error stack:', error.stack);
-    await message.reply(`❌ Error viewing wishlist: ${error.message}`);
+    const errorMsg = `❌ Error viewing wishlist: ${error.message}`;
+    if (loadingMsg) {
+      await loadingMsg.edit(errorMsg).catch(() => {});
+    } else {
+      await message.reply(errorMsg);
+    }
   }
 }
 
-module.exports = { handleWishlistAdd, handleWishlistView, handleWishlistRemove };
+async function handleWishlistSelection(message, selection) {
+  const pending = pendingConfirmations.get(message.author.id);
+  if (!pending) return false;
+  
+  if (selection.toLowerCase() === 'cancel') {
+    pendingConfirmations.delete(message.author.id);
+    await message.reply('❌ Cancelled.');
+    return true;
+  }
+  
+  const num = parseInt(selection);
+  if (isNaN(num) || num < 1 || num > pending.matches.length) {
+    return false;
+  }
+  
+  try {
+    const card = pending.matches[num - 1];
+    const exists = pending.wishlist.wl.some(c => c.n === card.name && c.e === card.element.toLowerCase());
+    
+    if (exists) {
+      await message.reply(`❌ **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} is already in your wishlist.`);
+    } else {
+      pending.wishlist.wl.push({ n: card.name, e: card.element.toLowerCase() });
+      pending.wishlist.cardCount = pending.wishlist.wl.length;
+      pending.wishlist.updatedAt = new Date();
+      await pending.wishlist.save();
+      invalidateCache(message.author.id);
+      
+      await message.reply(`✅ Added **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} [${card.series}] to your wishlist!`);
+    }
+    
+    pendingConfirmations.delete(message.author.id);
+    return true;
+  } catch (error) {
+    console.error('Selection error:', error);
+    await message.reply('❌ Error adding card.');
+    pendingConfirmations.delete(message.author.id);
+    return true;
+  }
+}
 
 async function handleWishlistRemove(message, cardNames) {
   try {
-    const allCards = getCards();
     const { Wishlist: WishlistModel } = await initWishlistConnection();
+    
+    const userWishlist = await WishlistModel.findById(message.author.id);
+    if (!userWishlist || userWishlist.wl.length === 0) {
+      await message.reply('❌ Your wishlist is empty.');
+      return;
+    }
     
     const namesToRemove = cardNames.split(',').map(n => n.trim()).filter(n => n);
     const removed = [];
     const notFound = [];
     
-    let userWishlist = await WishlistModel.findById(message.author.id);
-    if (!userWishlist || !userWishlist.wl || userWishlist.wl.length === 0) {
-      await message.reply('❌ Your wishlist is empty.');
-      return;
-    }
-    
     for (const name of namesToRemove) {
-      const card = allCards.find(c => c.name.toLowerCase() === name.toLowerCase());
-      if (card) {
-        const initialLength = userWishlist.wl.length;
-        userWishlist.wl = userWishlist.wl.filter(c => c.n.toLowerCase() !== card.name.toLowerCase());
-        if (userWishlist.wl.length < initialLength) {
-          removed.push(`${card.name} [${card.element}]`);
-        } else {
-          notFound.push(`${card.name} (not in your wishlist)`);
-        }
+      const found = userWishlist.wl.find(c => c.n.toLowerCase() === name.toLowerCase());
+      if (found) {
+        userWishlist.wl = userWishlist.wl.filter(c => c.n.toLowerCase() !== name.toLowerCase());
+        removed.push(`${found.n} [${found.e.charAt(0).toUpperCase() + found.e.slice(1)}]`);
       } else {
-        const suggestions = findSimilarCards(name, allCards);
-        if (suggestions.length > 0) {
-          notFound.push(`${name} (Did you mean: ${suggestions.join(', ')}?)`);
-        } else {
-          notFound.push(name);
-        }
+        notFound.push(`${name} (not in your wishlist)`);
       }
     }
     
@@ -291,7 +341,7 @@ async function handleWishlistRemove(message, cardNames) {
       embed.addFields({ name: '✅ Removed', value: removed.join('\n'), inline: false });
     }
     if (notFound.length > 0) {
-      embed.addFields({ name: '❌ Not Found/Removed', value: notFound.join('\n'), inline: false });
+      embed.addFields({ name: '❌ Not Found', value: notFound.join('\n'), inline: false });
     }
     
     await message.reply({ embeds: [embed] });
@@ -300,3 +350,5 @@ async function handleWishlistRemove(message, cardNames) {
     await message.reply('❌ Error removing from wishlist.');
   }
 }
+
+module.exports = { handleWishlistAdd, handleWishlistView, handleWishlistSelection, handleWishlistRemove };

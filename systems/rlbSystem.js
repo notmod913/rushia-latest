@@ -89,7 +89,18 @@ async function handleRlbCommand(message) {
 
     const row = new ActionRowBuilder().addComponents(components);
 
-    await message.channel.send({ embeds: [embed], components: [row] }).catch(() => {});
+    const reply = await message.channel.send({ embeds: [embed], components: [row] }).catch(() => {});
+    
+    // Disable buttons after 5 minutes
+    setTimeout(async () => {
+      try {
+        const disabledComponents = components.map(btn => ButtonBuilder.from(btn).setDisabled(true));
+        const disabledRow = new ActionRowBuilder().addComponents(disabledComponents);
+        await reply.edit({ components: [disabledRow] }).catch(() => {});
+      } catch (error) {
+        // Silent fail
+      }
+    }, 5 * 60 * 1000);
 
   } catch (error) {
     message.reply('❌ An error occurred while fetching the leaderboard.').catch(() => {});
@@ -98,7 +109,10 @@ async function handleRlbCommand(message) {
 
 async function handleRarityButton(interaction) {
   try {
-    const allowedUserId = interaction.customId.split('_')[3];
+    const parts = interaction.customId.split('_');
+    const allowedUserId = parts[3];
+    const currentPage = parts[4] ? parseInt(parts[4]) : 0;
+    
     if (interaction.user.id !== allowedUserId) {
       return interaction.reply({ content: 'Dont click 😭', ephemeral: true });
     }
@@ -122,7 +136,7 @@ async function handleRarityButton(interaction) {
         .setTimestamp();
 
       const backButton = new ButtonBuilder()
-        .setCustomId(`back_to_drops_${interaction.user.id}`)
+        .setCustomId(`back_to_drops_${interaction.user.id}_${currentPage}`)
         .setLabel('Back')
         .setStyle(ButtonStyle.Secondary)
         .setEmoji('⬅️');
@@ -168,9 +182,9 @@ async function handleRarityButton(interaction) {
     embed.addFields({ name: '\u200b', value: rankings });
     embed.setFooter({ text: `Total: ${totalExotic} Exotic | ${totalLegendary} Legendary` });
 
-    // Add back button
+    // Add back button with page info
     const backButton = new ButtonBuilder()
-      .setCustomId(`back_to_drops_${interaction.user.id}`)
+      .setCustomId(`back_to_drops_${interaction.user.id}_${currentPage}`)
       .setLabel('Back')
       .setStyle(ButtonStyle.Secondary)
       .setEmoji('⬅️');
@@ -186,19 +200,25 @@ async function handleRarityButton(interaction) {
 
 async function handleBackButton(interaction) {
   try {
-    const allowedUserId = interaction.customId.split('_')[3];
+    const parts = interaction.customId.split('_');
+    const allowedUserId = parts[3];
+    const currentPage = parts[4] ? parseInt(parts[4]) : 0;
+    
     if (interaction.user.id !== allowedUserId) {
       return interaction.reply({ content: 'Dont click 😭', ephemeral: true });
     }
 
-    const guildId = interaction.guild.id;
-    
-    const topDroppers = await Drops.find({ guildId })
-      .sort({ drop_count: -1 })
-      .limit(10);
+    const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+    const isOwner = interaction.user.id === BOT_OWNER_ID;
+    const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+    const canPaginate = isOwner || isAdmin;
 
-    const allDrops = await Drops.find({ guildId });
-    const totalDrops = allDrops.reduce((sum, user) => sum + user.drop_count, 0);
+    const guildId = interaction.guild.id;
+    const allDroppers = await Drops.find({ guildId }).sort({ drop_count: -1 });
+    const perPage = 10;
+    const page = currentPage || 0;
+    const topDroppers = allDroppers.slice(page * perPage, (page + 1) * perPage);
+    const totalDrops = allDroppers.reduce((sum, user) => sum + user.drop_count, 0);
 
     const embed = new EmbedBuilder()
       .setAuthor({ 
@@ -214,24 +234,54 @@ async function handleBackButton(interaction) {
     const maxWidth = Math.max(maxDrops.toString().length, 5);
     for (let i = 0; i < topDroppers.length; i++) {
       const user = topDroppers[i];
-      const rank = `${i + 1}]`.padEnd(4, ' ');
+      const rank = `${(page * perPage) + i + 1}]`.padEnd(4, ' ');
       const drops = user.drop_count.toString().padStart(maxWidth, ' ');
       rankings += `\`${rank}\` • \`${drops}\` • <@${user.userId}>\n`;
     }
     embed.addFields({ name: '\u200b', value: rankings });
-    embed.setFooter({ text: `👥 Participants: ${allDrops.length} | 🎴 Total Drops: ${totalDrops}` });
+    
+    if (canPaginate) {
+      const totalPages = Math.ceil(allDroppers.length / perPage);
+      embed.setFooter({ text: `Page ${page + 1}/${totalPages} | Participants: ${allDroppers.length} | Total Drops: ${totalDrops}` });
+    } else {
+      embed.setFooter({ text: `Participants: ${allDroppers.length} | Total Drops: ${totalDrops}` });
+    }
 
-    const button = new ButtonBuilder()
-      .setCustomId(`view_rarity_drops_${interaction.user.id}`)
+    const rarityButton = new ButtonBuilder()
+      .setCustomId(`view_rarity_drops_${interaction.user.id}_${page}`)
       .setLabel('Rare Drops')
       .setStyle(ButtonStyle.Primary);
 
-    const row = new ActionRowBuilder().addComponents(button);
+    const resetButton = new ButtonBuilder()
+      .setCustomId(`reset_drops_${interaction.user.id}`)
+      .setLabel('Reset')
+      .setStyle(ButtonStyle.Danger)
+      .setEmoji('🔄')
+      .setDisabled(!isOwner && !isAdmin);
 
+    const components = [rarityButton, resetButton];
+
+    if (canPaginate && allDroppers.length > perPage) {
+      const prevButton = new ButtonBuilder()
+        .setCustomId(`rlb_prev_${interaction.user.id}_${page}`)
+        .setLabel('◀')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(page === 0);
+      
+      const nextButton = new ButtonBuilder()
+        .setCustomId(`rlb_next_${interaction.user.id}_${page}`)
+        .setLabel('▶')
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled((page + 1) * perPage >= allDroppers.length);
+      
+      components.push(prevButton, nextButton);
+    }
+
+    const row = new ActionRowBuilder().addComponents(components);
     await interaction.update({ embeds: [embed], components: [row] });
 
   } catch (error) {
-    // Silent fail
+    console.error('Back button error:', error);
   }
 }
 

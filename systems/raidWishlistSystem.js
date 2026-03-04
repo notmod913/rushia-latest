@@ -11,6 +11,19 @@ const wishlistPingCache = new Map();
 let wishlistConn = null;
 let WishlistModel = null;
 
+const ELEMENT_EMOJIS = {
+  normal: '<:LU_NeutralElement:1478643394585821217>',
+  water: '<:LU_WaterElement:1478643391901470863>',
+  ice: '<:LU_IceElement:1478643390211035237>',
+  ground: '<:LU_GroundElement:1478643388155826299>',
+  grass: '<:LU_GrassElement:1478643385681055805>',
+  fire: '<:LU_FireElement:1478643383605006376>',
+  electric: '<:LU_ElectricElement:1478643380689829929>',
+  air: '<:LU_AirElement:1478643377523130420>',
+  light: '<:LU_LightElement:1478643374805352449>',
+  dark: '<:LU_DarkElement:1478643372485902426>'
+};
+
 async function getWishlistConnection() {
   if (!wishlistConn || wishlistConn.readyState !== 1) {
     wishlistConn = await mongoose.createConnection(process.env.WISHLIST_URI).asPromise();
@@ -69,7 +82,8 @@ async function checkWishlistAndPing(message, raidName, element) {
 
     if (usersWithWishlist.length > 0) {
       const mentions = usersWithWishlist.map(w => `<@${w._id}>`).join(' ');
-      message.channel.send(`${mentions} Your wishlisted raid **${raidName}** [${element}] has spawned!`).catch(() => {});
+      const emoji = ELEMENT_EMOJIS[element] || element;
+      message.channel.send(`${mentions} Your wishlisted raid **${raidName}** ${emoji} has spawned!`).catch(() => {});
     }
   } catch (error) {
     console.error('Wishlist error:', error.message);

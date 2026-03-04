@@ -149,9 +149,13 @@ module.exports = {
         
         // Handle card search number selection
         if (!message.author.bot && message.content.match(/^\d+$/)) {
-            const cardSearch = require('../systems/cardSearchSystem');
-            const handled = await cardSearch.handleSelection(message);
+            const { handleWishlistSelection } = require('../systems/wishlistSystem');
+            const handled = await handleWishlistSelection(message, message.content);
             if (handled) return;
+            
+            const cardSearch = require('../systems/cardSearchSystem');
+            const searchHandled = await cardSearch.handleSelection(message);
+            if (searchHandled) return;
         }
 
         // Only process Luvi bot messages for game notifications
