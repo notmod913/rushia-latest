@@ -240,7 +240,7 @@ async function handleWishlistView(message, targetUser = null) {
     
     const embed = new EmbedBuilder()
       .setColor(0x0099ff)
-      .setTitle(`${targetUser ? `${targetUser.username}'s` : 'Your'} Wishlist`)
+      .setTitle(`${targetUser ? `${targetUser.username}'s` : `${message.author.username}'s`} Wishlist`)
       .setDescription(cardLines.join('\n'))
       .setFooter({ text: `${totalCards}/10 cards` });
     

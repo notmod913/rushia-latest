@@ -10,6 +10,7 @@ const helpCategories = {
       { name: '🔍 Card Search', value: 'Search through 1000+ cards', inline: true },
       { name: '📊 Leaderboard', value: 'View drop statistics', inline: true },
       { name: '📦 Inventory Helper', value: 'Interactive inventory management', inline: true },
+      { name: '💝 Wishlist System', value: 'Track your wanted cards', inline: true },
       { name: '🔧 Auto Features', value: 'Automatic detection and reminders', inline: true }
     ]
   },
@@ -64,6 +65,15 @@ const helpCategories = {
       { name: 'Auto-React', value: 'Bot automatically reacts with 🔍 and ✏️ on inventory embeds' }
     ]
   },
+  wishlist: {
+    title: '💝 Wishlist System',
+    description: 'Track your wanted cards to get notified when they spawn in raids',
+    fields: [
+      { name: 'wa <card name>', value: 'Add a card to your wishlist (max 10 cards)' },
+      { name: 'wl', value: 'View your current wishlist' },
+      { name: 'wr <card name>', value: 'Remove a card from your wishlist' }
+    ]
+  },
   auto: {
     title: '🔧 Automatic Features',
     description: 'Features that work automatically in the background',
@@ -102,6 +112,7 @@ module.exports = {
             { label: 'Card Search', value: 'search', emoji: '🔍', description: 'Search cards' },
             { label: 'Leaderboard', value: 'leaderboard', emoji: '📊', description: 'Drop statistics' },
             { label: 'Inventory Helper', value: 'inventory', emoji: '📦', description: 'Inventory tools' },
+            { label: 'Wishlist System', value: 'wishlist', emoji: '💝', description: 'Track wanted cards' },
             { label: 'Auto Features', value: 'auto', emoji: '🔧', description: 'Automatic features' }
           ])
       );
@@ -155,6 +166,7 @@ async function handleHelpCommand(message) {
           { label: 'Card Search', value: 'search', emoji: '🔍', description: 'Search cards' },
           { label: 'Leaderboard', value: 'leaderboard', emoji: '📊', description: 'Drop statistics' },
           { label: 'Inventory Helper', value: 'inventory', emoji: '📦', description: 'Inventory tools' },
+          { label: 'Wishlist System', value: 'wishlist', emoji: '💝', description: 'Track wanted cards' },
           { label: 'Auto Features', value: 'auto', emoji: '🔧', description: 'Automatic features' }
         ])
     );
