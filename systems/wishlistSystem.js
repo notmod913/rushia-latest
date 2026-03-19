@@ -123,14 +123,6 @@ async function handleWishlistAdd(message, cardNames) {
     const allCards = getCards();
     const { Wishlist: WishlistModel } = await initWishlistConnection();
     
-    const namesToAdd = cardNames.split(',').map(n => n.trim()).filter(n => n);
-    
-    if (namesToAdd.length !== 1) {
-      await message.reply('❌ Please add one card at a time for better accuracy.');
-      return;
-    }
-    
-    const name = namesToAdd[0];
     let userWishlist = await WishlistModel.findById(message.author.id);
     if (!userWishlist) {
       userWishlist = new WishlistModel({ _id: message.author.id, wl: [], cardCount: 0 });
@@ -141,54 +133,140 @@ async function handleWishlistAdd(message, cardNames) {
       return;
     }
     
-    const matches = findSimilarCards(name, allCards);
+    // Split by comma and process each name
+    const namesToAdd = cardNames.split(',').map(n => n.trim()).filter(n => n);
     
-    if (matches.length === 0) {
-      await message.reply(`❌ No cards found matching "${name}".`);
+    if (namesToAdd.length === 0) {
+      await message.reply('❌ Please provide card name(s) to add.');
       return;
     }
     
-    if (matches.length === 1) {
-      const card = matches[0];
-      const exists = userWishlist.wl.some(c => c.n === card.name && c.e === card.element.toLowerCase());
-      if (exists) {
-        await message.reply(`❌ **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} is already in your wishlist.`);
-        return;
-      }
+    // Check if adding all cards would exceed limit
+    if (userWishlist.wl.length + namesToAdd.length > 10) {
+      await message.reply(`❌ Cannot add ${namesToAdd.length} cards - would exceed 10 card limit. You have ${userWishlist.wl.length}/10 cards.`);
+      return;
+    }
+    
+    const results = [];
+    const multipleMatches = [];
+    
+    for (const name of namesToAdd) {
+      const matches = allCards.filter(card => 
+        card.name.toLowerCase().includes(name.toLowerCase())
+      );
       
-      userWishlist.wl.push({ n: card.name, e: card.element.toLowerCase() });
+      if (matches.length === 0) {
+        results.push({ name, status: 'not_found' });
+      } else if (matches.length === 1) {
+        const card = matches[0];
+        const exists = userWishlist.wl.some(c => c.n === card.name && c.e === card.element.toLowerCase());
+        if (exists) {
+          results.push({ name, status: 'exists', card });
+        } else {
+          userWishlist.wl.push({ n: card.name, e: card.element.toLowerCase() });
+          results.push({ name, status: 'added', card });
+        }
+      } else {
+        multipleMatches.push({ name, matches: matches.slice(0, 5) });
+      }
+    }
+    
+    // Save if any cards were added
+    if (results.some(r => r.status === 'added')) {
       userWishlist.cardCount = userWishlist.wl.length;
       userWishlist.updatedAt = new Date();
       await userWishlist.save();
       invalidateCache(message.author.id);
-      
-      await message.reply(`✅ Added **${card.name}** ${ELEMENT_EMOJIS[card.element.toLowerCase()] || card.element} [${card.series}] to your wishlist!`);
-      return;
     }
     
-    const displayLimit = 25;
-    const displayMatches = matches.slice(0, displayLimit);
-    const hasMore = matches.length > displayLimit;
+    // Build response message
+    let response = '';
     
-    const embed = new EmbedBuilder()
-      .setColor(0xffaa00)
-      .setTitle('Multiple cards found')
-      .setDescription(`Found ${matches.length} card${matches.length > 1 ? 's' : ''}${hasMore ? ` (showing first ${displayLimit})` : ''}. Reply with the number to select:\n\n` +
-        displayMatches.map((c, i) => {
-          const emoji = ELEMENT_EMOJIS[c.element.toLowerCase()] || c.element;
-          return `**${i + 1}.** ${c.name} ${emoji} - ${c.series} (${c.role})`;
-        }).join('\n'))
-      .setFooter({ text: 'Reply with 1, 2, 3... or "cancel"' });
+    const added = results.filter(r => r.status === 'added');
+    const notFound = results.filter(r => r.status === 'not_found');
+    const exists = results.filter(r => r.status === 'exists');
     
-    await message.reply({ embeds: [embed] });
+    if (added.length > 0) {
+      response += '✅ **Added to wishlist:**\n';
+      added.forEach(r => {
+        const emoji = ELEMENT_EMOJIS[r.card.element.toLowerCase()] || r.card.element;
+        response += `• ${r.card.name} ${emoji} [${r.card.series}]\n`;
+      });
+      response += '\n';
+    }
     
-    pendingConfirmations.set(message.author.id, {
-      matches: displayMatches,
-      wishlist: userWishlist,
-      timestamp: Date.now()
-    });
+    if (exists.length > 0) {
+      response += '⚠️ **Already in wishlist:**\n';
+      exists.forEach(r => {
+        const emoji = ELEMENT_EMOJIS[r.card.element.toLowerCase()] || r.card.element;
+        response += `• ${r.card.name} ${emoji}\n`;
+      });
+      response += '\n';
+    }
     
-    setTimeout(() => pendingConfirmations.delete(message.author.id), 60000);
+    if (notFound.length > 0) {
+      response += '❌ **No card found:**\n';
+      notFound.forEach(r => response += `• ${r.name}\n`);
+      response += '\n';
+    }
+    
+    if (multipleMatches.length > 0) {
+      if (multipleMatches.length === 1 && namesToAdd.length === 1) {
+        // Single query with multiple matches - show selection interface
+        const matches = multipleMatches[0].matches;
+        const displayLimit = 5;
+        const totalMatches = matches.length;
+        const displayMatches = matches.slice(0, displayLimit);
+        const hasMore = totalMatches > displayLimit;
+        
+        const embed = new EmbedBuilder()
+          .setColor(0xffaa00)
+          .setTitle('Multiple cards found')
+          .setDescription(`Found ${totalMatches} card${totalMatches > 1 ? 's' : ''}${hasMore ? ` (showing 1-${displayLimit})` : ''}. Reply with the number to select:\n\n` +
+            displayMatches.map((c, i) => {
+              const emoji = ELEMENT_EMOJIS[c.element.toLowerCase()] || c.element;
+              return `**${i + 1}.** ${c.name} ${emoji} - ${c.series} (${c.role})`;
+            }).join('\n'))
+          .setFooter({ text: 'Reply with 1, 2, 3... or "cancel"' });
+        
+        const components = [];
+        if (hasMore) {
+          const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+          const row = new ActionRowBuilder()
+            .addComponents(
+              new ButtonBuilder()
+                .setCustomId('wishlist_next')
+                .setLabel('Next →')
+                .setStyle(ButtonStyle.Primary)
+            );
+          components.push(row);
+        }
+        
+        await message.reply({ embeds: [embed], components });
+        
+        pendingConfirmations.set(message.author.id, {
+          matches: matches,
+          displayMatches: displayMatches,
+          wishlist: userWishlist,
+          page: 0,
+          totalPages: Math.ceil(totalMatches / displayLimit),
+          timestamp: Date.now()
+        });
+        
+        setTimeout(() => pendingConfirmations.delete(message.author.id), 60000);
+        return;
+      } else {
+        // Multiple queries with multiple matches - just report them
+        response += '🔍 **Multiple matches found (be more specific):**\n';
+        multipleMatches.forEach(m => {
+          response += `• "${m.name}" - ${m.matches.length} matches\n`;
+        });
+      }
+    }
+    
+    if (response) {
+      await message.reply(response.trim());
+    }
     
   } catch (error) {
     console.error('Wishlist add error:', error);
@@ -272,14 +350,14 @@ async function handleWishlistSelection(message, selection) {
   }
   
   const num = parseInt(selection);
-  if (isNaN(num) || num < 1 || num > pending.matches.length) {
+  if (isNaN(num) || num < 1 || num > (pending.displayMatches || pending.matches).length) {
     return false;
   }
   
   try {
     if (pending.action === 'remove') {
       // Handle remove action
-      const cardToRemove = pending.matches[num - 1];
+      const cardToRemove = (pending.displayMatches || pending.matches)[num - 1];
       pending.wishlist.wl = pending.wishlist.wl.filter(c => c.n !== cardToRemove.n);
       pending.wishlist.cardCount = pending.wishlist.wl.length;
       pending.wishlist.updatedAt = new Date();
@@ -290,7 +368,7 @@ async function handleWishlistSelection(message, selection) {
       await message.reply(`✅ Removed **${cardToRemove.n}** ${emoji} from your wishlist!`);
     } else {
       // Handle add action
-      const card = pending.matches[num - 1];
+      const card = (pending.displayMatches || pending.matches)[num - 1];
       const exists = pending.wishlist.wl.some(c => c.n === card.name && c.e === card.element.toLowerCase());
       
       if (exists) {
@@ -314,6 +392,67 @@ async function handleWishlistSelection(message, selection) {
     pendingConfirmations.delete(message.author.id);
     return true;
   }
+}
+
+async function handleWishlistPagination(interaction) {
+  const pending = pendingConfirmations.get(interaction.user.id);
+  if (!pending || !pending.matches) {
+    await interaction.reply({ content: '❌ Selection expired.', ephemeral: true });
+    return;
+  }
+  
+  const displayLimit = 5;
+  const isNext = interaction.customId === 'wishlist_next';
+  const isPrev = interaction.customId === 'wishlist_prev';
+  
+  if (isNext) {
+    pending.page++;
+  } else if (isPrev) {
+    pending.page--;
+  }
+  
+  const startIndex = pending.page * displayLimit;
+  const endIndex = Math.min(startIndex + displayLimit, pending.matches.length);
+  pending.displayMatches = pending.matches.slice(startIndex, endIndex);
+  
+  const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+  
+  const embed = new EmbedBuilder()
+    .setColor(0xffaa00)
+    .setTitle('Multiple cards found')
+    .setDescription(`Found ${pending.matches.length} cards (showing ${startIndex + 1}-${endIndex}). Reply with the number to select:\n\n` +
+      pending.displayMatches.map((c, i) => {
+        const emoji = ELEMENT_EMOJIS[c.element.toLowerCase()] || c.element;
+        return `**${i + 1}.** ${c.name} ${emoji} - ${c.series} (${c.role})`;
+      }).join('\n'))
+    .setFooter({ text: 'Reply with 1, 2, 3... or "cancel"' });
+  
+  const components = [];
+  const row = new ActionRowBuilder();
+  
+  if (pending.page > 0) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId('wishlist_prev')
+        .setLabel('← Previous')
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  
+  if (endIndex < pending.matches.length) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId('wishlist_next')
+        .setLabel('Next →')
+        .setStyle(ButtonStyle.Primary)
+    );
+  }
+  
+  if (row.components.length > 0) {
+    components.push(row);
+  }
+  
+  await interaction.update({ embeds: [embed], components });
 }
 
 async function handleWishlistRemove(message, cardNames) {
@@ -342,7 +481,7 @@ async function handleWishlistRemove(message, cardNames) {
     );
     
     if (wishlistMatches.length === 0) {
-      await message.reply(`❌ No cards in your wishlist match "${name}".`);
+      await message.reply('❌ No card found');
       return;
     }
     
@@ -387,4 +526,4 @@ async function handleWishlistRemove(message, cardNames) {
   }
 }
 
-module.exports = { handleWishlistAdd, handleWishlistView, handleWishlistSelection, handleWishlistRemove };
+module.exports = { handleWishlistAdd, handleWishlistView, handleWishlistSelection, handleWishlistRemove, handleWishlistPagination };
