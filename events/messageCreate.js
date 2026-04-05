@@ -66,12 +66,7 @@ module.exports = {
                 return;
             }
             
-            if (content.match(/^stats$/i)) {
-                const { handleStatsCommand } = require('../systems/healthWebhookSystem');
-                await handleStatsCommand(message);
-                return;
-            }
-            
+
             if (content.match(/^rem(?:\s|$)/i)) {
                 const { handleReminderView } = require('../utils/reminderViewer');
                 const args = content.toLowerCase().replace(/^rem\s*/i, '').trim();
@@ -98,7 +93,7 @@ module.exports = {
                 return;
             }
             
-            if (content.match(/^rstats$/i)) {
+            if (content.match(/^stats$/i)) {
                 const { handleRstatsCommand } = require('../commands/rstats');
                 await handleRstatsCommand(message);
                 return;
@@ -206,12 +201,7 @@ module.exports = {
                 return;
             }
             
-            if (command === 'stats') {
-                const { handleStatsCommand } = require('../systems/healthWebhookSystem');
-                await handleStatsCommand(message);
-                return;
-            }
-            
+
             if (command === 'rem') {
                 const { handleReminderView } = require('../utils/reminderViewer');
                 const filter = args[1] || null;
@@ -238,7 +228,7 @@ module.exports = {
                 return;
             }
             
-            if (command === 'rstats') {
+            if (command === 'stats') {
                 const { handleRstatsCommand } = require('../commands/rstats');
                 await handleRstatsCommand(message);
                 return;
