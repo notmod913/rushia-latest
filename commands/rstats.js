@@ -2,16 +2,6 @@ const { EmbedBuilder } = require('discord.js');
 const mongoose = require('mongoose');
 const os = require('os');
 
-function extractDbName(uri) {
-  if (!uri) return 'Not configured';
-  try {
-    const match = uri.match(/\.net\/([^?]+)/);
-    return match ? match[1] : 'Unknown';
-  } catch {
-    return 'Invalid URI';
-  }
-}
-
 function formatUptime(ms) {
   const days = Math.floor(ms / 86400000);
   const hours = Math.floor((ms % 86400000) / 3600000);
@@ -72,11 +62,10 @@ async function handleRstatsCommand(message) {
     const freeMem = os.freemem();
     const usedMem = totalMem - freeMem;
     
-    // Database info
-    const mainDb = extractDbName(process.env.MONGODB_URI);
-    const logsDb = extractDbName(process.env.LOGS_URI);
-    const pogDb = extractDbName(process.env.POG_MONGODB_URI);
-    const wishlistDb = extractDbName(process.env.WISHLIST_URI);
+    // Database names (static)
+    const mainDb = 'Main Database';
+    const pogDb = 'POG Database';
+    const wishlistDb = 'Wishlist Database';
     
     // MongoDB connection states and ping
     const mainState = mongoose.connection.readyState;
@@ -90,16 +79,14 @@ async function handleRstatsCommand(message) {
     
     // Get other database connections
     const connections = mongoose.connections;
-    let logsDbPing = 'N/A';
     let pogDbPing = 'N/A';
     let wishlistDbPing = 'N/A';
     
     for (const conn of connections) {
       if (conn.readyState === 1 && conn.name) {
         const dbPing = await pingDatabase(conn);
-        if (conn.name === logsDb) logsDbPing = dbPing;
-        else if (conn.name === pogDb) pogDbPing = dbPing;
-        else if (conn.name === wishlistDb) wishlistDbPing = dbPing;
+        if (conn.name === 'pogbot') pogDbPing = dbPing;
+        else if (conn.name === 'wishlist') wishlistDbPing = dbPing;
       }
     }
     
@@ -117,7 +104,6 @@ async function handleRstatsCommand(message) {
         { name: '💾 Memory (System)', value: `${formatBytes(usedMem)} / ${formatBytes(totalMem)}`, inline: true },
         { name: '⚙️ Node.js', value: process.version, inline: true },
         { name: '<:db:1471141805327126608> Main DB', value: `${mainDb}\n${stateMap[mainState]}\n🏓 ${mainDbPing}`, inline: true },
-        { name: '<:db:1471141805327126608> Logs DB', value: `${logsDb}\n🏓 ${logsDbPing}`, inline: true },
         { name: '<:db:1471141805327126608> POG DB', value: `${pogDb}\n🏓 ${pogDbPing}`, inline: true },
         { name: '<:db:1471141805327126608> Wishlist DB', value: `${wishlistDb}\n🏓 ${wishlistDbPing}`, inline: true },
         { name: '🔧 Platform', value: `${os.platform()} ${os.arch()}`, inline: true },
