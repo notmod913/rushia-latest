@@ -31,7 +31,7 @@ async function processBossMessage(message) {
   }
 
   const roleConfig = settings.multiRoleEnabled 
-    ? `Multi-role: T1=${settings.tier1RoleId || 'none'}, T2=${settings.tier2RoleId || 'none'}, T3=${settings.tier3RoleId || 'none'}`
+    ? `Multi-role: T1=${settings.tier1RoleId || 'none'}, T2=${settings.tier2RoleId || 'none'}, T3=${settings.tier3RoleId || 'none'}, T4=${settings.tier4RoleId || 'none'}`
     : `Single role: ${settings.bossRoleId || 'none'}`;
   console.log(`[BOSS] ${roleConfig}`);
 
