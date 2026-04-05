@@ -111,6 +111,15 @@ module.exports = {
                 return;
             }
             
+            // Setpog command: @bot setpog #channel or @bot setpog channelId
+            const setpogMatch = content.match(/^setpog(?:\s+(.+))?$/i);
+            if (setpogMatch) {
+                const { handleSetpogCommand } = require('../commands/setpog');
+                const args = setpogMatch[1] ? setpogMatch[1].trim().split(/\s+/) : [];
+                await handleSetpogCommand(message, args);
+                return;
+            }
+            
             // Handle info command with server ID
             const infoMatch = content.match(/^(info|i|in|inf)\s+(\d+)$/i);
             if (infoMatch) {
@@ -243,6 +252,12 @@ module.exports = {
             if (command === 'config') {
                 const { handleConfigCommand } = require('../commands/config');
                 await handleConfigCommand(message);
+                return;
+            }
+            
+            if (command === 'setpog') {
+                const { handleSetpogCommand } = require('../commands/setpog');
+                await handleSetpogCommand(message, args.slice(1));
                 return;
             }
             

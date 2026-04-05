@@ -8,6 +8,18 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    // Check if user is bot owner or has admin permissions
+    const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+    const isOwner = interaction.user.id === BOT_OWNER_ID;
+    const hasAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
+    if (!isOwner && !hasAdmin) {
+      return await interaction.reply({ 
+        content: '❌ You need Administrator permission to use this command.', 
+        ephemeral: true 
+      });
+    }
+
     await interaction.deferReply({ ephemeral: true });
 
     try {
@@ -69,7 +81,12 @@ async function handleConfigToggle(interaction) {
     return true;
   }
 
-  if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+  // Check if user is bot owner or has admin permissions
+  const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+  const isOwner = interaction.user.id === BOT_OWNER_ID;
+  const hasAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator);
+
+  if (!isOwner && !hasAdmin) {
     await interaction.reply({ content: '❌ You need Administrator permission to change configuration.', ephemeral: true });
     return true;
   }
@@ -108,7 +125,12 @@ async function handleConfigCommand(message) {
     return;
   }
 
-  if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
+  // Check if user is bot owner or has admin permissions
+  const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+  const isOwner = message.author.id === BOT_OWNER_ID;
+  const hasAdmin = message.member.permissions.has(PermissionFlagsBits.Administrator);
+
+  if (!isOwner && !hasAdmin) {
     await message.reply('❌ You need Administrator permission to use this command.');
     return;
   }

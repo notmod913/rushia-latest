@@ -3,8 +3,8 @@ const PogGuild = require('../database/PogGuild');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('set-pog-channel')
-    .setDescription('Set the channel for POG (high-value drop) alerts')
+    .setName('setpog')
+    .setDescription('Set the channel for POG (high-value drop) alerts (SOFI only)')
     .addChannelOption(option =>
       option
         .setName('channel')
@@ -20,6 +20,18 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
   async execute(interaction) {
+    // Check if user is bot owner or has admin permissions
+    const BOT_OWNER_ID = process.env.BOT_OWNER_ID;
+    const isOwner = interaction.user.id === BOT_OWNER_ID;
+    const hasAdmin = interaction.member?.permissions.has(PermissionFlagsBits.Administrator);
+
+    if (!isOwner && !hasAdmin) {
+      return await interaction.reply({ 
+        content: '❌ You need Administrator permission to use this command.', 
+        ephemeral: true 
+      });
+    }
+
     try {
       const guildId = interaction.guildId;
       if (!guildId) {
