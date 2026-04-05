@@ -45,7 +45,8 @@ module.exports = {
         description += '**Boss Roles:**\n';
         description += `• Tier 1: ${settings.tier1RoleId ? `<@&${settings.tier1RoleId}>` : '❌ Not set'}\n`;
         description += `• Tier 2: ${settings.tier2RoleId ? `<@&${settings.tier2RoleId}>` : '❌ Not set'}\n`;
-        description += `• Tier 3: ${settings.tier3RoleId ? `<@&${settings.tier3RoleId}>` : '❌ Not set'}`;
+        description += `• Tier 3: ${settings.tier3RoleId ? `<@&${settings.tier3RoleId}>` : '❌ Not set'}\n`;
+        description += `• Tier 4: ${settings.tier4RoleId ? `<@&${settings.tier4RoleId}>` : '❌ Not set'}`;
       } else {
         // Show single roles
         const bossRole = settings.bossRoleId ? `<@&${settings.bossRoleId}>` : '❌ Not set';

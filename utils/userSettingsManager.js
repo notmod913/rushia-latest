@@ -53,8 +53,18 @@ async function updateUserSettings(userId, newSettings) {
   }
 }
 
+function clearCache(userId) {
+  return CacheManager.deleteUserSettings(userId);
+}
+
+function clearAllCache() {
+  return CacheManager.clearAllUserSettings();
+}
+
 module.exports = {
   initializeUserSettings,
   getUserSettings,
   updateUserSettings,
+  clearCache,
+  clearAllCache
 };

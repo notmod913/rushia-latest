@@ -24,3 +24,9 @@ Thumbs.db
 # Scripts folder
 scripts/
 battle/
+
+# Testing folder
+testing/
+
+# Claude AI folder
+.claude/

@@ -25,7 +25,8 @@ module.exports = {
             .addChoices(
               { name: 'Tier 1', value: 'tier1' },
               { name: 'Tier 2', value: 'tier2' },
-              { name: 'Tier 3', value: 'tier3' }
+              { name: 'Tier 3', value: 'tier3' },
+              { name: 'Tier 4', value: 'tier4' }
             ))
         .addRoleOption(option =>
           option.setName('role')

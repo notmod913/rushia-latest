@@ -26,7 +26,7 @@ module.exports = {
     WARNING: 0xffaa00
   },
   
-  TIERS: ['t1', 't2', 't3'],
+  TIERS: ['t1', 't2', 't3', 't4'],
   
   REMINDER_TYPES: ['expedition', 'stamina', 'raid', 'raidSpawn', 'drop'],
   

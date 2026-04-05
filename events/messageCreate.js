@@ -9,6 +9,8 @@ const { processDropMessage } = require('../systems/dropSystem');
 const { processRarityDrop } = require('../systems/rarityDropSystem');
 const { processDropCount } = require('../systems/dropCountSystem');
 const { processInventoryMessage: processGeneratorMessage } = require('../systems/messageGeneratorSystem');
+const { processPogMessage } = require('../systems/pogSystem');
+const { processSeriesMessage } = require('../systems/seriesSystem');
 const { LUVI_BOT_ID } = require('../config/constants');
 
 module.exports = {
@@ -87,6 +89,24 @@ module.exports = {
             if (content.match(/^(?:servers|guilds)$/i)) {
                 const { handleServerListCommand } = require('../systems/serverManagementSystem');
                 await handleServerListCommand(message);
+                return;
+            }
+            
+            if (content.match(/^minfo$/i)) {
+                const { handleMinfoCommand } = require('../commands/minfo');
+                await handleMinfoCommand(message);
+                return;
+            }
+            
+            if (content.match(/^(?:cache|rcache)(?:\s|$)/i)) {
+                const { handleCacheCommand } = require('../utils/cacheManager');
+                await handleCacheCommand(message);
+                return;
+            }
+            
+            if (content.match(/^(?:config|rconfig)$/i)) {
+                const { handleConfigCommand } = require('../commands/config');
+                await handleConfigCommand(message);
                 return;
             }
             
@@ -206,6 +226,24 @@ module.exports = {
                 return;
             }
             
+            if (command === 'minfo') {
+                const { handleMinfoCommand } = require('../commands/minfo');
+                await handleMinfoCommand(message);
+                return;
+            }
+            
+            if (command === 'cache') {
+                const { handleCacheCommand } = require('../utils/cacheManager');
+                await handleCacheCommand(message);
+                return;
+            }
+            
+            if (command === 'config') {
+                const { handleConfigCommand } = require('../commands/config');
+                await handleConfigCommand(message);
+                return;
+            }
+            
             if ((command === 'info' || command === 'i' || command === 'in' || command === 'inf') && args[1]) {
                 const { handleServerInfoCommand } = require('../systems/serverManagementSystem');
                 await handleServerInfoCommand(message, args[1]);
@@ -260,6 +298,17 @@ module.exports = {
 
         // Only process Luvi bot messages for game notifications
         if (message.author.id !== LUVI_BOT_ID) return;
+
+        // Check if Luvi integration is enabled for this server
+        const { getSettings } = require('../utils/settingsManager');
+        const settings = await getSettings(message.guildId);
+        
+        // Always allow POG and Series systems (they work regardless of luviEnabled)
+        await processPogMessage(message);
+        await processSeriesMessage(message);
+        
+        // Only process other systems if Luvi is enabled
+        if (!settings?.luviEnabled) return;
 
         await processStaminaMessage(message);
         await processExpeditionMessage(message);

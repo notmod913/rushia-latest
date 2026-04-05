@@ -11,6 +11,7 @@ const helpCategories = {
       { name: '📊 Leaderboard', value: 'View drop statistics', inline: true },
       { name: '📦 Inventory Helper', value: 'Interactive inventory management', inline: true },
       { name: '💝 Wishlist System', value: 'Track your wanted cards', inline: true },
+      { name: '🎉 POG Alerts', value: 'High-value drop notifications', inline: true },
       { name: '🔧 Auto Features', value: 'Automatic detection and reminders', inline: true }
     ]
   },
@@ -22,6 +23,7 @@ const helpCategories = {
       { name: '/multi-roles enable', value: 'Enable separate roles for each boss tier (1, 2, 3)' },
       { name: '/multi-roles disable', value: 'Use single role for all boss tiers' },
       { name: '/multi-roles set-boss', value: 'Set role for specific tier (Tier 1/2/3)' },
+      { name: '/set-pog-channel', value: 'Set channel for POG alerts (use #channel or channel ID)' },
       { name: '/view-settings', value: 'View current boss role configuration' }
     ]
   },
@@ -74,6 +76,17 @@ const helpCategories = {
       { name: 'wr <card name>', value: 'Remove a card from your wishlist' }
     ]
   },
+  pog: {
+    title: '🎉 POG Alerts',
+    description: 'Automatic high-value drop detection and forwarding',
+    fields: [
+      { name: 'What is POG?', value: 'When Luvi drops cards with heart values over 99, the bot automatically forwards them to your configured channel with a special alert.' },
+      { name: 'Setup', value: 'Use `/set-pog-channel channel:#pog-alerts` or `/set-pog-channel channel-id:123456789`' },
+      { name: 'Features', value: '• Detects drops with hearts > 99\n• Animated embed with all heart values\n• "Jump to Message" button\n• Mentions the user who got the drop' },
+      { name: 'Series Hearts', value: 'Bot also shows heart values for series when Luvi posts series selection embeds' },
+      { name: 'Cache Management', value: 'Owner can use `rcache` commands to refresh POG settings' }
+    ]
+  },
   auto: {
     title: '🔧 Automatic Features',
     description: 'Features that work automatically in the background',
@@ -113,6 +126,7 @@ module.exports = {
             { label: 'Leaderboard', value: 'leaderboard', emoji: '📊', description: 'Drop statistics' },
             { label: 'Inventory Helper', value: 'inventory', emoji: '📦', description: 'Inventory tools' },
             { label: 'Wishlist System', value: 'wishlist', emoji: '💝', description: 'Track wanted cards' },
+            { label: 'POG Alerts', value: 'pog', emoji: '🎉', description: 'High-value drops' },
             { label: 'Auto Features', value: 'auto', emoji: '🔧', description: 'Automatic features' }
           ])
       );

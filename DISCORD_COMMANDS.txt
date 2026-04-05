@@ -1,0 +1,189 @@
+# Discord Command Reference - Copy & Paste Ready
+
+## MESSAGE 1: ADMIN COMMANDS
+```
+📋 **ADMIN COMMANDS** (Requires Manage Roles)
+
+**Boss Roles:**
+• `/set-boss-role role:@Role` - Set role for all bosses
+• `/multi-roles enable` - Enable tier-specific roles
+• `/multi-roles set-boss tier:Tier1 role:@Role` - Set tier role
+• `/view-settings` - View current configuration
+
+**POG System:**
+• `/set-pog-channel channel:#pog` - Set POG alert channel
+• Detects drops with hearts > 99 automatically
+
+**Test:** Trigger boss spawn or high-value drop
+```
+
+## MESSAGE 2: USER COMMANDS
+```
+👤 **USER COMMANDS**
+
+**Notifications:**
+• `/notifications view` - View your settings
+• `/notifications set type:stamina enabled:true` - Toggle notifications
+• `/dm enable type:stamina` - Get DMs instead of channel pings
+
+**Types:** expedition, stamina, raid, raidSpawnReminder, drop
+
+**Other:**
+• `/suggestion` - Send feedback to bot owner
+• `/help` - Interactive help menu
+
+**Test:** Set notification, then trigger that event
+```
+
+## MESSAGE 3: CARD SEARCH & LEADERBOARD
+```
+🔍 **CARD SEARCH**
+• `@bot f naruto` - Search 1000+ cards
+• `@bot find fire duelist` - Search with filters
+• Type number (1,2,3) to select from multiple results
+
+📊 **LEADERBOARD**
+• `rlb` - View top 10 droppers
+• Click "Rare Drops" for Exotic/Legendary stats
+
+**Test:** Search a card, check leaderboard after drops
+```
+
+## MESSAGE 4: WISHLIST SYSTEM
+```
+💝 **WISHLIST** (Max 10 cards)
+
+• `wa Naruto` - Add card
+• `wa Ichigo, Luffy, Goku` - Add multiple
+• `wl` - View your wishlist
+• `wr Naruto` - Remove card
+
+**Auto-Notify:** Get pinged when wishlisted card spawns in raid
+
+**Test:** Add cards, wait for raid with those cards
+```
+
+## MESSAGE 5: AUTOMATIC FEATURES
+```
+🤖 **AUTO FEATURES** (No commands needed)
+
+✅ Boss Detection - Pings configured roles
+✅ Stamina Reminders - When stamina refills
+✅ Expedition Reminders - When expedition completes
+✅ Raid Reminders - Fatigue recovery + 30min spawn
+✅ Drop Reminders - 1 hour cooldown tracker
+✅ POG Alerts - Hearts > 99 forwarded to channel
+✅ Series Hearts - Shows heart values on series selection
+✅ Wishlist Raids - Notifies when your cards spawn
+
+**Test:** Use Luvi commands and wait for reminders
+```
+
+## MESSAGE 6: INVENTORY HELPER
+```
+📦 **INVENTORY HELPER**
+
+Bot auto-reacts on inventory embeds:
+• 🔍 **Command Builder** - Select cards, build commands
+• ✏️ **Card Scraper** - Extract & organize by rarity
+
+**How to use:**
+1. Use Luvi's inventory command
+2. Click 🔍 or ✏️ reaction
+3. Follow interactive menu
+
+**Test:** Open inventory, click reactions
+```
+
+## MESSAGE 7: OWNER COMMANDS
+```
+🔧 **OWNER COMMANDS** (Bot owner only)
+
+**Cache Management:**
+• `rcache` - Refresh all caches
+• `rcache server` - Refresh current server
+• `rcache stats` - View cache statistics
+• Auto-refreshes every 5 minutes
+
+**Logs & Info:**
+• `/logs level:Error` - View bot logs with filters
+• `minfo` - View server POG configuration
+
+**Test:** Run commands and verify output
+```
+
+## MESSAGE 8: TESTING CHECKLIST
+```
+🧪 **QUICK TEST CHECKLIST**
+
+Admin:
+☐ Set boss role → trigger boss spawn
+☐ Enable multi-roles → test tier pings
+☐ Set POG channel → drop hearts > 99
+
+User:
+☐ Toggle notifications → trigger event
+☐ Enable DM → check if DM received
+☐ Add to wishlist → check raid notification
+
+Search:
+☐ Search card → verify results
+☐ Check leaderboard → verify stats
+
+Auto:
+☐ Use stamina → check reminder
+☐ Start expedition → check reminder
+☐ Complete raid → check fatigue reminder
+```
+
+## MESSAGE 9: TROUBLESHOOTING
+```
+🐛 **TROUBLESHOOTING**
+
+**Bot not responding:**
+• Check bot is online
+• Verify "Send Messages" permission
+• Try slash command instead of mention
+
+**Role not pinged:**
+• Run `/view-settings` to verify role
+• Check role is mentionable
+• Verify bot has mention permission
+
+**Reminders not working:**
+• Check `/notifications view`
+• Verify notification type enabled
+• Check DM permissions if DM enabled
+
+**POG not working:**
+• Verify channel set with `/set-pog-channel`
+• Check bot has send permission in channel
+• Ensure hearts > 99
+
+**Cache issues:**
+• Run `rcache` to refresh manually
+• Check `rcache stats` for info
+```
+
+## MESSAGE 10: QUICK REFERENCE
+```
+⚡ **QUICK REFERENCE**
+
+Slash Commands: `/set-boss-role` `/notifications` `/dm` `/help`
+Mention Commands: `@bot f <card>` `rlb` `wa <card>` `wl` `wr <card>`
+Owner Commands: `rcache` `minfo` `/logs`
+
+**Notification Types:**
+expedition, stamina, raid, raidSpawnReminder, drop
+
+**Boss Tiers:**
+Tier 1, Tier 2, Tier 3
+
+**Databases:**
+Main DB (settings, reminders)
+POG DB (POG channels, series)
+Wishlist DB (user wishlists)
+Logs DB (bot logs)
+
+**Support:** Use `/suggestion` to send feedback
+```

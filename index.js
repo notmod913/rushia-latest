@@ -1,32 +1,4 @@
 require('dotenv').config();
-const express = require('express');
-const app = express();
-
-app.use(express.json());
-
-app.get('/health', (req, res) => {
-  const { getCommandCount } = require('./systems/healthWebhookSystem');
-  res.json({
-    status: 'online',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    commandsUsed: getCommandCount(),
-    timestamp: new Date()
-  });
-});
-
-app.post('/webhook/health', (req, res) => {
-  const { setWebhookUrl } = require('./systems/healthWebhookSystem');
-  setWebhookUrl(req.body.webhookUrl);
-  res.json({ success: true, message: 'Webhook URL set' });
-});
-
-app.listen(3001, () => console.log('Health check on port 3001'));
-
-if (process.env.HEALTH_WEBHOOK_URL) {
-  const { setWebhookUrl } = require('./systems/healthWebhookSystem');
-  setWebhookUrl(process.env.HEALTH_WEBHOOK_URL);
-}
 
 const { 
   Client, 
@@ -41,12 +13,12 @@ const {
 const fs = require('fs');
 const path = require('path');
 const { startScheduler } = require('./tasks/reminderScheduler');
+const { startCacheRefreshScheduler, setClient: setCacheClient } = require('./tasks/cacheRefreshScheduler');
 const { initializeSettings } = require('./utils/settingsManager');
 const { initializeUserSettings } = require('./utils/userSettingsManager');
 const DatabaseManager = require('./database/database');
 const { sendLog, sendError, initializeLogsDB, silenceConsole } = require('./utils/logger');
 const { handleCardInventorySystem } = require('./systems/cardInventorySystem');
-const { incrementCommandCount, startHealthPosting, setClient } = require('./systems/healthWebhookSystem');
 
 const client = new Client({
   intents: [
@@ -83,12 +55,7 @@ for (const file of eventFiles) {
     }
 }
 
-// Track command usage
-client.on(Events.InteractionCreate, async (interaction) => {
-  if (interaction.isCommand()) incrementCommandCount();
-});
-
-// Load system handlers for reactions
+// Load event handlers from ./events folder
 const { handleGeneratorReaction } = require('./systems/messageGeneratorSystem');
 
 // Handle reactions for generator system and card rarity system
@@ -123,6 +90,7 @@ client.on(Events.GuildCreate, async (guild) => {
 
 // Deploy slash commands function
 async function deployCommands(client) {
+  console.log('🔄 Starting command deployment...');
   const commands = [];
   const commandsPath = path.join(__dirname, 'commands');
   const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
@@ -136,14 +104,24 @@ async function deployCommands(client) {
     commands.push(command.data.toJSON());
   }
 
+  console.log(`📋 Found ${commands.length} commands to deploy`);
+
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
   
   try {
-    await rest.put(
+    console.log('⏳ Deploying commands to Discord...');
+    const data = await rest.put(
       Routes.applicationCommands(process.env.CLIENT_ID),
       { body: commands }
     );
+    console.log(`✅ Successfully deployed ${data.length} slash commands!`);
+    await sendLog('COMMANDS_DEPLOYED', {
+      category: 'SYSTEM',
+      action: 'COMMANDS_DEPLOYED',
+      count: data.length
+    });
   } catch (error) {
+    console.error('❌ Failed to deploy commands:', error);
     await sendError(`Failed to deploy commands: ${error.message}`);
     throw error;
   }
@@ -152,11 +130,21 @@ async function deployCommands(client) {
 // Connect to MongoDB and login the bot
 (async () => {
   try {
-    await DatabaseManager.connect();
-    await DatabaseManager.createIndexes();
-    await initializeLogsDB();
+    console.log('🚀 Starting bot initialization...');
     
-    // Deploy commands before starting bot
+    console.log('📦 Connecting to MongoDB...');
+    await DatabaseManager.connect();
+    console.log('✅ MongoDB connected');
+    
+    console.log('🗂️ Creating database indexes...');
+    await DatabaseManager.createIndexes();
+    console.log('✅ Database indexes created');
+    
+    console.log('📝 Initializing logs database...');
+    await initializeLogsDB();
+    console.log('✅ Logs database initialized');
+    
+    // Auto-deploy commands on startup
     await deployCommands(client);
     
     // Schedule daily cleanup
@@ -165,19 +153,36 @@ async function deployCommands(client) {
     }, 24 * 60 * 60 * 1000); // Daily
 
   client.once(Events.ClientReady, async readyClient => {
+        console.log(`✅ Bot logged in as ${readyClient.user.tag}`);
+        
         await sendLog('BOT_READY', { 
           category: 'SYSTEM',
           action: 'BOT_READY',
           botTag: readyClient.user.tag,
           botId: readyClient.user.id
         });
+        
+        console.log('📂 Initializing settings cache...');
         await initializeSettings();
         await initializeUserSettings();
-        startScheduler(readyClient);
-        handleCardInventorySystem(readyClient);
-        setClient(readyClient);
-        startHealthPosting();
+        console.log('✅ Settings cache initialized');
         
+        console.log('⏰ Starting reminder scheduler...');
+        startScheduler(readyClient);
+        console.log('✅ Reminder scheduler started');
+        
+        console.log('🗄️ Starting cache refresh scheduler...');
+        setCacheClient(readyClient);
+        startCacheRefreshScheduler();
+        console.log('✅ Cache refresh scheduler started (every 5 minutes)');
+        
+        console.log('📦 Initializing inventory helper...');
+        handleCardInventorySystem(readyClient);
+        console.log('✅ Inventory helper initialized');
+        
+        console.log('🎮 Setting up bot activities...');
+        
+        console.log('🎮 Setting up bot activities...');
         const activities = [
           { name: 'boss spawns', type: ActivityType.Watching },
           { name: 'raid fatigue', type: ActivityType.Listening },
@@ -195,12 +200,19 @@ async function deployCommands(client) {
         
         updateActivity();
         setInterval(updateActivity, 20000);
+        console.log('✅ Bot activities configured (rotating every 20s)');
         
-
+        console.log('\n🎉 Bot is fully operational!');
+        console.log(`🔗 Invite: https://discord.com/api/oauth2/authorize?client_id=${process.env.CLIENT_ID}&permissions=8&scope=bot%20applications.commands`);
+        console.log(`📊 Servers: ${readyClient.guilds.cache.size}`);
+        console.log(`👥 Users: ${readyClient.users.cache.size}`);
+        console.log('\n✅ All systems ready!\n');
     });
 
+    console.log('🔑 Logging in to Discord...');
     await client.login(process.env.BOT_TOKEN);
   } catch (error) {
+    console.error('❌ Fatal error during bot startup:', error);
     await sendError(`Failed to start bot: ${error.message}`);
     process.exit(1);
   }

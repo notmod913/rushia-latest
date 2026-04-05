@@ -39,6 +39,21 @@ class DatabaseManager {
         Drops.createIndexes(),
         RarityDrop.createIndexes()
       ]);
+      
+      // Initialize POG models separately (they use their own connection)
+      try {
+        const PogGuild = require('./PogGuild');
+        const Series = require('./Series');
+        
+        // Sync indexes (will update existing indexes if needed)
+        await PogGuild.syncIndexes();
+        await Series.syncIndexes();
+        
+        console.log('✅ POG database indexes created');
+      } catch (pogError) {
+        console.error('⚠️ POG database indexes failed:', pogError.message);
+        // Don't throw - POG features are optional
+      }
     } catch (error) {
       const { sendError } = require('../utils/logger');
       await sendError(`Failed to create indexes: ${error.message}`);

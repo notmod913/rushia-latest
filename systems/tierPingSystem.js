@@ -42,7 +42,8 @@ async function processBossMessage(message) {
     const tierMap = {
       'Tier 1': 'tier1RoleId',
       'Tier 2': 'tier2RoleId',
-      'Tier 3': 'tier3RoleId'
+      'Tier 3': 'tier3RoleId',
+      'Tier 4': 'tier4RoleId'
     };
     
     const roleField = tierMap[bossInfo.tier];

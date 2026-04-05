@@ -61,6 +61,8 @@ module.exports = {
             try {
                 const { handleReminderInteraction } = require('../utils/reminderViewer');
                 if (await handleReminderInteraction(interaction)) return;
+                const { handleConfigToggle } = require('../commands/config');
+                if (await handleConfigToggle(interaction)) return;
                 const { handleHelpCategory } = require('../commands/help');
                 if (await handleHelpCategory(interaction)) return;
                 if (await handleNameSelect(interaction)) return;

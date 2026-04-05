@@ -70,8 +70,18 @@ async function updateSettings(guildId, newSettings) {
   }
 }
 
+function clearCache(guildId) {
+  CacheManager.deleteGuildSettings(guildId);
+}
+
+function clearAllCache() {
+  return CacheManager.clearAllGuildSettings();
+}
+
 module.exports = {
   initializeSettings,
   getSettings,
   updateSettings,
+  clearCache,
+  clearAllCache
 };
