@@ -1,5 +1,6 @@
 const Series = require('../database/Series');
 const { sendError } = require('../utils/logger');
+const { SOFI_BOT_ID } = require('../config/constants');
 
 // In-memory cache for series data
 let seriesCache = null;
@@ -37,7 +38,7 @@ function matchSeriesInList(displayName, list) {
 
 async function processSeriesMessage(message) {
   try {
-    const TARGET_BOT_ID = '853629533855809596'; // SOFI bot ID
+    const TARGET_BOT_ID = SOFI_BOT_ID;
     
     console.log(`[SERIES] Message from: ${message.author.id} (${message.author.username})`);
     

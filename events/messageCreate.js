@@ -11,7 +11,7 @@ const { processDropCount } = require('../systems/dropCountSystem');
 const { processInventoryMessage: processGeneratorMessage } = require('../systems/messageGeneratorSystem');
 const { processPogMessage } = require('../systems/pogSystem');
 const { processSeriesMessage } = require('../systems/seriesSystem');
-const { LUVI_BOT_ID } = require('../config/constants');
+const { LUVI_BOT_ID, SOFI_BOT_ID } = require('../config/constants');
 
 module.exports = {
     name: Events.MessageCreate,
@@ -313,18 +313,19 @@ module.exports = {
             if (searchHandled) return;
         }
 
-        // Only process Luvi bot messages for game notifications
+        // Route bot messages to the appropriate system
+        if (message.author.id === SOFI_BOT_ID) {
+            await processSeriesMessage(message);
+            return;
+        }
+
         if (message.author.id !== LUVI_BOT_ID) return;
 
-        // Check if Luvi integration is enabled for this server
         const { getSettings } = require('../utils/settingsManager');
         const settings = await getSettings(message.guildId);
-        
-        // Always allow POG and Series systems (they work regardless of luviEnabled)
+
         await processPogMessage(message);
-        await processSeriesMessage(message);
-        
-        // Only process other systems if Luvi is enabled
+
         if (!settings?.luviEnabled) return;
 
         await processStaminaMessage(message);

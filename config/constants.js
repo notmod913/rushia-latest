@@ -1,5 +1,6 @@
 module.exports = {
   LUVI_BOT_ID: '1269481871021047891',
+  SOFI_BOT_ID: '853629533855809596',
   BOT_OWNER_ID: process.env.BOT_OWNER_ID,
   
   STAMINA: {
