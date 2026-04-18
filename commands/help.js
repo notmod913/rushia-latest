@@ -22,7 +22,7 @@ const helpCategories = {
       { name: '/set-boss-role [role]', value: 'Set or remove role to ping for all boss spawns' },
       { name: '/multi-roles enable', value: 'Enable separate roles for each boss tier (1, 2, 3)' },
       { name: '/multi-roles disable', value: 'Use single role for all boss tiers' },
-      { name: '/multi-roles set-boss', value: 'Set role for specific tier (Tier 1/2/3)' },
+      { name: 'rsetpog <#channel>', value: 'Set channel for POG alerts\n**Usage:** `rsetpog #pog-alerts` or `@bot setpog #pog-alerts`' },
       { name: '/set-pog-channel', value: 'Set channel for POG alerts (use #channel or channel ID)' },
       { name: '/view-settings', value: 'View current boss role configuration' }
     ]
