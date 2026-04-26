@@ -9,12 +9,12 @@
   "scripts": {
     "start": "node --max-old-space-size=1024 index.js",
     "dev": "nodemon index.js",
-    "deploy": "node deploy-commands.js",
-    "refresh": "node scripts/refresh-commands.js",
-    "sync": "node scripts/sync-commands.js",
-    "invite": "node scripts/generate-invite.js",
-    "inspect": "node scripts/message-inspector.js",
-    "seed": "node scripts/seedDatabase.js"
+    "deploy": "node dev/scripts/deploy/deploy-commands.js",
+    "refresh": "node dev/scripts/deploy/refresh-commands.js",
+    "sync": "node dev/scripts/deploy/sync-commands.js",
+    "invite": "node dev/scripts/deploy/generate-invite.js",
+    "inspect": "node dev/tests/message-inspector.js",
+    "seed": "node dev/scripts/seedDatabase.js"
   },
   "dependencies": {
     "discord.js": "^14.25.1",

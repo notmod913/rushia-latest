@@ -21,12 +21,9 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Scripts folder
-scripts/
+# Development folder (scripts, tests, migrations)
+dev/
 battle/
-
-# Testing folder
-testing/
 
 # Claude AI folder
 .claude/

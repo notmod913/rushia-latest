@@ -12,13 +12,13 @@ const {
 } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
-const { startScheduler } = require('./tasks/reminderScheduler');
-const { startCacheRefreshScheduler, setClient: setCacheClient } = require('./tasks/cacheRefreshScheduler');
-const { initializeSettings } = require('./utils/settingsManager');
-const { initializeUserSettings } = require('./utils/userSettingsManager');
-const DatabaseManager = require('./database/database');
-const { sendLog, sendError, initializeLogsDB, silenceConsole } = require('./utils/logger');
-const { handleCardInventorySystem } = require('./systems/cardInventorySystem');
+const { startScheduler } = require('./src/tasks/reminder.scheduler');
+const { startCacheRefreshScheduler, setClient: setCacheClient } = require('./src/tasks/cache-refresh.scheduler');
+const { initializeSettings } = require('./src/utils/settings.manager');
+const { initializeUserSettings } = require('./src/utils/user-settings.manager');
+const DatabaseManager = require('./src/database/database.manager');
+const { sendLog, sendError, initializeLogsDB, silenceConsole } = require('./src/utils/logger');
+const { handleCardInventorySystem } = require('./src/systems/cardInventorySystem');
 
 const client = new Client({
   intents: [
@@ -31,7 +31,7 @@ const client = new Client({
 
 // Load commands from ./commands folder
 client.commands = new Collection();
-const commandsPath = path.join(__dirname, 'commands');
+const commandsPath = path.join(__dirname, 'src', 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
@@ -42,7 +42,7 @@ for (const file of commandFiles) {
 }
 
 // Load event handlers from ./events folder
-const eventsPath = path.join(__dirname, 'events');
+const eventsPath = path.join(__dirname, 'src', 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
 for (const file of eventFiles) {
@@ -56,7 +56,7 @@ for (const file of eventFiles) {
 }
 
 // Load event handlers from ./events folder
-const { handleGeneratorReaction } = require('./systems/messageGeneratorSystem');
+const { handleGeneratorReaction } = require('./src/systems/message-generator.system');
 
 // Handle reactions for generator system and card rarity system
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
@@ -92,7 +92,7 @@ client.on(Events.GuildCreate, async (guild) => {
 async function deployCommands(client) {
   console.log('🔄 Starting command deployment...');
   const commands = [];
-  const commandsPath = path.join(__dirname, 'commands');
+  const commandsPath = path.join(__dirname, 'src', 'commands');
   const commandFiles = fs.readdirSync(commandsPath).filter(f => f.endsWith('.js'));
 
   for (const file of commandFiles) {
