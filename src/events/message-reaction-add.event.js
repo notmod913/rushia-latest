@@ -1,10 +1,18 @@
 const { extractCardsFromEmbed, extractCardsFromComponent, buildRarityMessage } = require('../utils/card-rarity.parser');
 const { startPaginationWatcher } = require('../systems/cardInventorySystem');
+const { handleIDExtractorReaction } = require('../systems/id-fetch.system');
 
 module.exports = {
     name: 'messageReactionAdd',
     async execute(reaction, user) {
         if (user.bot) return;
+
+        if (reaction.emoji.name === '🆔') {
+            await reaction.message.fetch();
+            await handleIDExtractorReaction(reaction, user);
+            return;
+        }
+
         if (reaction.emoji.name !== '✏️') return;
 
         try {
