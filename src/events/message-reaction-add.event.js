@@ -9,6 +9,8 @@ module.exports = {
 
         if (reaction.emoji.name === '🆔') {
             await reaction.message.fetch();
+            const botReaction = reaction.message.reactions.cache.get('🆔');
+            if (!botReaction?.me) return;
             await handleIDExtractorReaction(reaction, user);
             return;
         }

@@ -12,6 +12,7 @@ const { processInventoryMessage: processGeneratorMessage } = require('../systems
 const { processPogMessage } = require('../systems/pog.system');
 const { processSeriesMessage } = require('../systems/series.system');
 const { LUVI_BOT_ID, SOFI_BOT_ID } = require('../config/constants');
+const { addIdReaction } = require('../systems/id-fetch.system');
 
 module.exports = {
     name: Events.MessageCreate,
@@ -337,5 +338,6 @@ module.exports = {
         await processDropCount(message);
         await processBossMessage(message);
         await processGeneratorMessage(message);
+        await addIdReaction(message);
     }
 };

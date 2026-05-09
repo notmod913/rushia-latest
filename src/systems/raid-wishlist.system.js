@@ -30,7 +30,7 @@ async function getWishlistConnection() {
     WishlistModel = wishlistConn.model('Wishlist', new mongoose.Schema({
       _id: String,
       wl: [{ n: String, e: String }]
-    }, { _id: false }), 'wishlists');
+    }), 'wishlists');
   }
   return WishlistModel;
 }
@@ -53,18 +53,17 @@ function parseRaidInfo(description) {
   const tierMatch = description.match(/Tier(\d)|T(\d)/i);
   const tier = tierMatch ? parseInt(tierMatch[1] || tierMatch[2]) : null;
 
-  let element = null;
-  for (const [key, value] of Object.entries(ELEMENT_MAP)) {
-    if (description.includes(key)) {
-      element = value;
-      break;
-    }
-  }
+  const elementMatches = [...description.matchAll(/:LU_(\w+Element):/g)]
+    .map(m => ELEMENT_MAP[m[1]])
+    .filter(Boolean);
 
   const nameMatch = description.match(/\*\*([^\[]+?)\s*\[/i);
-  const raidName = nameMatch ? nameMatch[1].trim() : null;
+  const rawName = nameMatch ? nameMatch[1].trim() : null;
+  const raidNames = rawName ? rawName.split(/\s*&\s*/).map(n => n.trim()).filter(Boolean) : [];
 
-  return { raidName, tier, element };
+  const raids = raidNames.map((name, i) => ({ name, element: elementMatches[i] || elementMatches[0] || null }));
+
+  return { raidName: raidNames[0] || null, raidNames, raids, tier, element: elementMatches[0] || null };
 }
 
 async function checkWishlistAndPing(message, raidName, element) {
@@ -114,10 +113,10 @@ async function detectAndSetRaidSpawnReminder(message) {
   const embed = message.embeds[0];
   if (embed.title !== 'Raid Spawned!') return;
 
-  const { raidName, tier, element } = parseRaidInfo(embed.description || '');
+  const { raidName, raidNames, raids, tier, element } = parseRaidInfo(embed.description || '');
 
-  if (raidName && element) {
-    await checkWishlistAndPing(message, raidName, element);
+  if (raids.length) {
+    await Promise.all(raids.filter(r => r.element).map(r => checkWishlistAndPing(message, r.name, r.element)));
   }
 
   const userId = message.interactionMetadata?.user?.id || message.interaction?.user?.id;

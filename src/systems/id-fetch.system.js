@@ -47,6 +47,25 @@ function extractIdsFromComponents(components) {
   return ids;
 }
 
+function hasExtractableIds(message) {
+  if (message.embeds.length) {
+    const ids = extractIdsFromEmbed(message.embeds[0]);
+    if (ids.length) return true;
+  }
+  if (message.components.length) {
+    const ids = extractIdsFromComponents(message.components);
+    if (ids.length) return true;
+  }
+  return false;
+}
+
+async function addIdReaction(message) {
+  if (!hasExtractableIds(message)) return;
+  try {
+    await message.react('🆔');
+  } catch (e) {}
+}
+
 async function handleIDExtractorReaction(reaction, user) {
   const message = reaction.message;
 
@@ -78,5 +97,6 @@ async function handleIDExtractorReaction(reaction, user) {
 
 module.exports = {
   handleIDExtractorReaction,
-  extractIdsFromEmbed
+  extractIdsFromEmbed,
+  addIdReaction
 };
