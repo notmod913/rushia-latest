@@ -259,6 +259,11 @@ async function handleBackButton(interaction) {
       .setLabel('Rare Drops')
       .setStyle(ButtonStyle.Primary);
 
+    const clashButton = new ButtonBuilder()
+      .setCustomId(`view_clash_lb_${interaction.user.id}`)
+      .setLabel('Clash')
+      .setStyle(ButtonStyle.Success);
+
     const resetButton = new ButtonBuilder()
       .setCustomId(`reset_drops_${interaction.user.id}`)
       .setLabel('Reset')
@@ -266,7 +271,7 @@ async function handleBackButton(interaction) {
       .setEmoji('🔄')
       .setDisabled(!isOwner && !isAdmin);
 
-    const components = [rarityButton, resetButton];
+    const components = [rarityButton, clashButton, resetButton];
 
     if (canPaginate && allDroppers.length > perPage) {
       const prevButton = new ButtonBuilder()
@@ -493,6 +498,11 @@ async function handleRlbPagination(interaction) {
     .setLabel('Rare Drops')
     .setStyle(ButtonStyle.Primary);
 
+  const clashButton = new ButtonBuilder()
+    .setCustomId(`view_clash_lb_${userId}`)
+    .setLabel('Clash')
+    .setStyle(ButtonStyle.Success);
+
   const resetButton = new ButtonBuilder()
     .setCustomId(`reset_drops_${userId}`)
     .setLabel('Reset')
@@ -512,7 +522,7 @@ async function handleRlbPagination(interaction) {
     .setStyle(ButtonStyle.Secondary)
     .setDisabled((newPage + 1) * perPage >= allDroppers.length);
 
-  const row = new ActionRowBuilder().addComponents(rarityButton, resetButton, prevButton, nextButton);
+  const row = new ActionRowBuilder().addComponents(rarityButton, clashButton, resetButton, prevButton, nextButton);
 
   await interaction.update({ embeds: [embed], components: [row] });
   return true;
