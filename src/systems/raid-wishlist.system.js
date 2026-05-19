@@ -82,13 +82,20 @@ async function checkWishlistAndPing(message, raidNames, elements) {
 
     const spawnerUserId = message.interactionMetadata?.user?.id || message.interaction?.user?.id;
     const spawnerMention = spawnerUserId ? `<@${spawnerUserId}>` : 'someone';
-    const elementEmoji = elements.map(e => ELEMENT_EMOJIS[e] || e).join('');
-    const displayName = raidNames.join(' & ');
 
-    const mentions = usersWithWishlist.map(w => `<@${w._id}>`).join(' ');
-    message.channel.send(`${mentions} Your wishlisted raid **${displayName}** ${elementEmoji} has spawned!`).catch(() => {});
+    // Build a name->element map for per-user display
+    const nameElementMap = {};
+    raidNames.forEach((name, i) => { nameElementMap[name] = elements[i] || elements[0]; });
 
     for (const user of usersWithWishlist) {
+      // Only show the names this user actually has in their wl
+      const matchedNames = raidNames.filter(n => user.wl.some(w => w.n === n));
+      const displayName = matchedNames.join(' & ');
+      const elementEmoji = matchedNames.map(n => ELEMENT_EMOJIS[nameElementMap[n]] || '').join('');
+      const mention = `<@${user._id}>`;
+
+      message.channel.send(`${mention} Your wishlisted raid **${displayName}** ${elementEmoji} has spawned!`).catch(() => {});
+
       try {
         const discordUser = await message.client.users.fetch(user._id);
         await discordUser.send(`Your wishlist raid **${displayName}** ${elementEmoji} has spawned by ${spawnerMention}!`);

@@ -229,11 +229,6 @@ async function handleWishlistView(message, targetUser = null) {
     const userId = targetUser?.id || message.author.id;
     const isOwner = message.author.id === process.env.BOT_OWNER_ID;
     
-    if (targetUser && !isOwner) {
-      await message.reply('❌ Only the bot owner can view other users\' wishlists.');
-      return;
-    }
-    
     let wishlist = getCachedWishlist(userId);
     
     if (!wishlist) {
